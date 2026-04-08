@@ -2,6 +2,7 @@ import asyncio
 import random
 import logging
 import os
+import sys
 from playwright.async_api import async_playwright
 from playwright_stealth import Stealth
 from config import TIKTOK_STATE_FILE, HEADLESS, CAPTIONS, HASHTAGS
@@ -34,17 +35,24 @@ async def upload_video(video_path, caption=None):
     async with async_playwright() as p:
         logging.info("--- MEMULAI PROSES PLAYWRIGHT ---")
         try:
+            # Cek environment VPS Linux otomatis
+            is_linux_vps = sys.platform.startswith('linux') and not os.getenv("DISPLAY") and not os.getenv("WAYLAND_DISPLAY")
+            actual_headless = True if is_linux_vps else HEADLESS
+            
             logging.info(f"Target file: {video_path}")
-            logging.info(f"Headless mode: {HEADLESS}")
+            logging.info(f"Mode Headless yang digunakan: {actual_headless}")
             logging.info("Sedang menyalakan browser Chromium...")
             
             browser = await p.chromium.launch(
-                headless=HEADLESS,
+                headless=actual_headless,
                 args=[
                     "--disable-blink-features=AutomationControlled",
                     "--no-sandbox",
                     "--disable-setuid-sandbox",
-                    "--disable-dev-shm-usage"
+                    "--disable-dev-shm-usage",
+                    "--disable-gpu", # Sangat penting untuk VPS tanpa GPU
+                    "--no-first-run",
+                    "--no-zygote"
                 ],
                 timeout=60000 # 1 menit max
             )
