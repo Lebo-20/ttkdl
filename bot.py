@@ -4,7 +4,7 @@ import logging
 import subprocess
 from telegram import Update
 from telegram.ext import ApplicationBuilder, ContextTypes, MessageHandler, filters, CommandHandler, Application
-from config import TELEGRAM_TOKEN, DOWNLOAD_DIR, ADMIN_IDS, POST_INTERVAL_HOURS, TARGET_GROUP_ID
+from config import TELEGRAM_TOKEN, DOWNLOAD_DIR, ADMIN_IDS, POST_INTERVAL_HOURS, ALLOWED_CHANNELS
 
 # Enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
@@ -25,7 +25,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "3. `/cd` untuk cek sisa cooldown.\n"
         "4. `/resetcd` untuk paksa reset cooldown.\n"
         "5. `/update` untuk tarik update dari GitHub.\n"
-        "6. Kirim foto/video untuk posting ke TikTok.",
+        "6. `/id` untuk cek ID chat/channel ini.\n"
+        "7. `/list` untuk cek daftar channel diizinkan.\n"
+        "8. Kirim foto/video untuk posting ke TikTok.",
         parse_mode="Markdown"
     )
 
@@ -90,9 +92,33 @@ async def git_update(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         await status_msg.edit_text(f"❌ Terjadi kesalahan: {e}")
 
+async def list_channels(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Menampilkan daftar channel yang diizinkan"""
+    msg = update.message or update.channel_post
+    if not msg: return
+    if msg.chat.type == "private" and not is_admin(update.effective_user.id): return
+
+    text = "📋 **Daftar Channel Diizinkan:**\n\n"
+    if not ALLOWED_CHANNELS:
+        text += "_Tidak ada channel yang terdaftar._"
+    else:
+        for cid in ALLOWED_CHANNELS:
+            text += f"• `{cid}`\n"
+    
+    await msg.reply_text(text, parse_mode="Markdown")
+
 async def handle_media(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = update.message or update.channel_post
     if not msg: return
+    
+    chat_id = msg.chat_id
+    # Jika bukan admin di private chat DAN bukan dari channel yang diizinkan, abaikan
+    is_allowed = chat_id in ALLOWED_CHANNELS
+    is_admin_user = msg.chat.type == "private" and is_admin(update.effective_user.id if update.effective_user else 0)
+    
+    if not is_allowed and not is_admin_user:
+        return
+
     # Skip if it's a command like /setmusic
     if msg.text and msg.text.startswith('/'): return
     if msg.chat.type == "private" and not is_admin(update.effective_user.id): return
@@ -144,10 +170,10 @@ async def auto_status_update(context: ContextTypes.DEFAULT_TYPE):
     if count > 0:
         text = f"📊 **[STATUS UPDATE]**\n\n📌 **Selanjutnya:** `{title}`\n📦 **Antrean:** {count} file\n{music_status}\n{cd_text}"
     else:
-        text = f"📊 **[STATUS UPDATE]**\n\nAntrean kosong.\n{music_status}"
+        text = f"📊 **[STATUS UPDATE]**\n\nAntrean kosong.\n{music_status}\n{cd_text}"
     
-    if TARGET_GROUP_ID and TARGET_GROUP_ID != -1001234567890:
-        try: await context.bot.send_message(chat_id=TARGET_GROUP_ID, text=text, parse_mode="Markdown")
+    for chat_id in ALLOWED_CHANNELS:
+        try: await context.bot.send_message(chat_id=chat_id, text=text, parse_mode="Markdown")
         except: pass
 
 async def post_init(application: Application):
@@ -161,8 +187,9 @@ def main():
     from config import TELEGRAM_TOKEN
     application = ApplicationBuilder().token(TELEGRAM_TOKEN).post_init(post_init).build()
     application.add_handler(CommandHandler("start", start))
-    application.add_handler(CommandHandler("id", lambda u, c: u.effective_message.reply_text(f"Chat ID: `{u.effective_chat.id}`", parse_mode="Markdown")))
+    application.add_handler(CommandHandler("id", lambda u, c: u.effective_message.reply_text(f"📍 **Chat ID:** `{u.effective_chat.id}`\n**Type:** {u.effective_chat.type}", parse_mode="Markdown")))
     application.add_handler(CommandHandler("cd", lambda u, c: u.effective_message.reply_text(upload_queue.get_cooldown_text(), parse_mode="Markdown")))
+    application.add_handler(CommandHandler("list", list_channels))
     application.add_handler(CommandHandler("setmusic", set_music))
     application.add_handler(CommandHandler("unmusic", unmusic))
     application.add_handler(CommandHandler("resetcd", reset_cd))

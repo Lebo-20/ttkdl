@@ -17,7 +17,7 @@ UPLOAD_DELAY_MAX = 60  # seconds
 
 # Pengaturan Penjadwalan (Jam)
 POST_INTERVAL_HOURS = 0.5  # Posting setiap 30 menit sekali
-TARGET_GROUP_ID = -1001234567890 # Ganti dengan ID grup Anda (atau bot akan mendeteksi otomatis)
+ALLOWED_CHANNELS = [-1001234567890] # Masukkan ID Channel yang diizinkan di sini
 
 # Captions and Hashtags
 CAPTIONS = [

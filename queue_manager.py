@@ -17,7 +17,8 @@ class UploadQueue:
             "video_path": video_path,
             "chat_id": chat_id,
             "message_id": message_id,
-            "caption": caption
+            "caption": caption,
+            "chat_id": chat_id
         }
         await self.queue.put(job)
         return self.queue.qsize()
@@ -28,9 +29,10 @@ class UploadQueue:
         try:
             next_job = self.queue._queue[0]
             title = next_job.get("caption", "Tanpa Judul")
+            source_id = next_job.get("chat_id", "Unknown")
             if not title.strip(): title = "Media"
-            title = title.split("\n")[0][:40]
-            return title, count
+            title = title.split("\n")[0][:30]
+            return f"{title} (ID: {source_id})", count
         except: return "Pending...", count
 
     def get_cooldown_text(self):
