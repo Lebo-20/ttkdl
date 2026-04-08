@@ -32,18 +32,34 @@ async def dismiss_modals(page):
 
 async def upload_video(video_path, caption=None):
     async with async_playwright() as p:
-        browser = await p.chromium.launch(
-            headless=HEADLESS,
-            args=[
-                "--disable-blink-features=AutomationControlled",
-                "--no-sandbox",
-                "--disable-setuid-sandbox",
-                "--disable-dev-shm-usage"
-            ]
-        )
+        logging.info("--- MEMULAI PROSES PLAYWRIGHT ---")
+        try:
+            logging.info(f"Target file: {video_path}")
+            logging.info(f"Headless mode: {HEADLESS}")
+            logging.info("Sedang menyalakan browser Chromium...")
+            
+            browser = await p.chromium.launch(
+                headless=HEADLESS,
+                args=[
+                    "--disable-blink-features=AutomationControlled",
+                    "--no-sandbox",
+                    "--disable-setuid-sandbox",
+                    "--disable-dev-shm-usage"
+                ],
+                timeout=60000 # 1 menit max
+            )
+            logging.info("✔ Browser berhasil menyala.")
+        except Exception as e:
+            logging.error(f"✘ Gagal menyalakan browser: {e}")
+            return False, f"Gagal menyalakan browser: {e}"
+        
+        logging.info("Menyiapkan konteks browser...")
+        # Cek apakah file state ada
+        state_exists = os.path.exists(TIKTOK_STATE_FILE)
+        logging.info(f"Sesi login ditemukan: {state_exists}")
         
         context = await browser.new_context(
-            storage_state=TIKTOK_STATE_FILE,
+            storage_state=TIKTOK_STATE_FILE if state_exists else None,
             user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
         )
         page = await context.new_page()
