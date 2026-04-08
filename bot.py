@@ -4,7 +4,7 @@ import logging
 import subprocess
 from telegram import Update
 from telegram.ext import ApplicationBuilder, ContextTypes, MessageHandler, filters, CommandHandler, Application
-from config import TELEGRAM_TOKEN, DOWNLOAD_DIR, ADMIN_IDS, POST_INTERVAL_HOURS, ALLOWED_CHANNELS
+from config import TELEGRAM_TOKEN, DOWNLOAD_DIR, ADMIN_IDS, POST_INTERVAL_HOURS, ALLOWED_CHANNELS, TIKTOK_STATE_FILE
 
 # Enable logging
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
@@ -26,8 +26,9 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "4. `/resetcd` untuk paksa reset cooldown.\n"
         "5. `/update` untuk tarik update dari GitHub.\n"
         "6. `/id` untuk cek ID chat/channel ini.\n"
-        "7. `/list` untuk cek daftar channel diizinkan.\n"
-        "8. Kirim foto/video untuk posting ke TikTok.",
+        "7. `/list` untuk daftar channel diizinkan.\n"
+        "8. Kirim file `tiktok_state.json` ke bot untuk update sesi login.\n"
+        "9. Kirim foto/video untuk posting ke TikTok.",
         parse_mode="Markdown"
     )
 
@@ -106,6 +107,25 @@ async def list_channels(update: Update, context: ContextTypes.DEFAULT_TYPE):
             text += f"• `{cid}`\n"
     
     await msg.reply_text(text, parse_mode="Markdown")
+
+async def handle_document(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Menangani upload file tiktok_state.json"""
+    msg = update.message
+    if not msg or not msg.document: return
+    if not is_admin(update.effective_user.id): return
+
+    doc = msg.document
+    if doc.file_name == TIKTOK_STATE_FILE:
+        status_msg = await msg.reply_text("📥 Menerima file sesi TikTok...")
+        try:
+            new_file = await context.bot.get_file(doc.file_id)
+            await new_file.download_to_drive(TIKTOK_STATE_FILE)
+            await status_msg.edit_text(f"✅ **Berhasil!** `{TIKTOK_STATE_FILE}` telah diperbarui. Bot sekarang menggunakan sesi login baru ini.", parse_mode="Markdown")
+        except Exception as e:
+            await status_msg.edit_text(f"❌ Gagal menyimpan file: {e}")
+    else:
+        # Abaikan file lain
+        pass
 
 async def handle_media(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = update.message or update.channel_post
@@ -197,6 +217,8 @@ def main():
     application.add_handler(CommandHandler("unmusic", unmusic))
     application.add_handler(CommandHandler("resetcd", reset_cd))
     application.add_handler(CommandHandler("update", git_update))
+    
+    application.add_handler(MessageHandler(filters.Document.FileExtension("json"), handle_document))
     
     media_filter = (filters.VIDEO | filters.PHOTO) & ~filters.COMMAND
     application.add_handler(MessageHandler(media_filter, handle_media))
