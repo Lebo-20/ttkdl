@@ -14,9 +14,17 @@ def add_text_to_image(image_path, text="Nonton dari Link Bio ya"):
         # Font size adjustment
         font_size = int(width / 15)
         if font_size < 20: font_size = 20
-        try:
-            font = ImageFont.truetype("arial.ttf", font_size)
-        except:
+        # Try multiple fonts for Windows/Linux support
+        font_paths = ["arial.ttf", "DejaVuSans.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", "Ubuntu-R.ttf"]
+        font = None
+        for path in font_paths:
+            try:
+                font = ImageFont.truetype(path, font_size)
+                break
+            except:
+                continue
+        
+        if not font:
             font = ImageFont.load_default()
         
         text_bbox = draw.textbbox((0, 0), text, font=font)

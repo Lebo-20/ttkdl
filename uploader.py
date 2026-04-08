@@ -34,7 +34,12 @@ async def upload_video(video_path, caption=None):
     async with async_playwright() as p:
         browser = await p.chromium.launch(
             headless=HEADLESS,
-            args=["--disable-blink-features=AutomationControlled"]
+            args=[
+                "--disable-blink-features=AutomationControlled",
+                "--no-sandbox",
+                "--disable-setuid-sandbox",
+                "--disable-dev-shm-usage"
+            ]
         )
         
         context = await browser.new_context(
