@@ -181,7 +181,10 @@ async def post_init(application: Application):
     from queue_manager import UploadQueue
     upload_queue = UploadQueue(application.bot)
     upload_queue.start()
-    application.job_queue.run_repeating(auto_status_update, interval=1800, first=10)
+    if application.job_queue:
+        application.job_queue.run_repeating(auto_status_update, interval=1800, first=10)
+    else:
+        print("⚠️ Warning: JobQueue is not available. Auto status updates disabled.")
 
 def main():
     from config import TELEGRAM_TOKEN
