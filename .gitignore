@@ -1,0 +1,9 @@
+downloads/
+__pycache__/
+*.png
+*.jpg
+*.mp4
+*.json
+.env
+.DS_Store
+*.log
