@@ -20,9 +20,12 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = update.message or update.channel_post
     await msg.reply_text(
         "🎧 **Manajemen Musik Bot**\n\n"
-        "1. Kirim/Balas MP3 dengan `/setmusic` untuk mengaktifkan musik latar.\n"
-        "2. Gunakan `/unmusic` untuk menghapus musik latar aktif.\n"
-        "3. Kirim foto/video untuk mulai memposting ke TikTok.",
+        "1. Kirim MP3 dangan `/setmusic` (balas file) untuk lagu latar.\n"
+        "2. `/unmusic` untuk hapus lagu latar.\n"
+        "3. `/cd` untuk cek sisa cooldown.\n"
+        "4. `/resetcd` untuk paksa reset cooldown.\n"
+        "5. `/update` untuk tarik update dari GitHub.\n"
+        "6. Kirim foto/video untuk posting ke TikTok.",
         parse_mode="Markdown"
     )
 
@@ -59,6 +62,33 @@ async def unmusic(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await msg.reply_text(f"❌ Gagal menghapus file: {e}")
     else:
         await msg.reply_text("ℹ️ Tidak ada musik kustom yang aktif saat ini.")
+
+async def reset_cd(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Reset cooldown posting dengan /resetcd"""
+    msg = update.message or update.channel_post
+    if not msg: return
+    if msg.chat.type == "private" and not is_admin(update.effective_user.id): return
+    
+    upload_queue.reset_cooldown()
+    await msg.reply_text("✅ **Cooldown berhasil di-reset!** Bot akan segera memproses antrean (jika ada).", parse_mode="Markdown")
+
+async def git_update(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Update bot dari github dengan /update"""
+    msg = update.message or update.channel_post
+    if not msg: return
+    if msg.chat.type == "private" and not is_admin(update.effective_user.id): return
+    
+    status_msg = await msg.reply_text("🔄 Sedang mengambil update dari GitHub...")
+    try:
+        # Menjalankan git pull
+        result = subprocess.run(["git", "pull"], capture_output=True, text=True, timeout=30)
+        if result.returncode == 0:
+            output = result.stdout if result.stdout.strip() else "Sudah versi terbaru."
+            await status_msg.edit_text(f"✅ **Update Berhasil!**\n\n```\n{output}\n```\nBot perlu direstart untuk menerapkan kode baru.", parse_mode="Markdown")
+        else:
+            await status_msg.edit_text(f"❌ **Gagal Update!**\n\n```\n{result.stderr}\n```", parse_mode="Markdown")
+    except Exception as e:
+        await status_msg.edit_text(f"❌ Terjadi kesalahan: {e}")
 
 async def handle_media(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = update.message or update.channel_post
@@ -135,6 +165,8 @@ def main():
     application.add_handler(CommandHandler("cd", lambda u, c: u.effective_message.reply_text(upload_queue.get_cooldown_text(), parse_mode="Markdown")))
     application.add_handler(CommandHandler("setmusic", set_music))
     application.add_handler(CommandHandler("unmusic", unmusic))
+    application.add_handler(CommandHandler("resetcd", reset_cd))
+    application.add_handler(CommandHandler("update", git_update))
     
     media_filter = (filters.VIDEO | filters.PHOTO) & ~filters.COMMAND
     application.add_handler(MessageHandler(media_filter, handle_media))

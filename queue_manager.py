@@ -87,6 +87,9 @@ class UploadQueue:
                     logging.info("Gagal. Skipping ke selanjutnya dalam 1 menit...")
                     await asyncio.sleep(60)
 
+    def reset_cooldown(self):
+        self.next_post_at = datetime.now()
+
     def start(self):
         if self.worker_task is None:
             self.worker_task = asyncio.create_task(self.worker())
