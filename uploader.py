@@ -35,13 +35,12 @@ async def upload_video(video_path, caption=None):
     async with async_playwright() as p:
         logging.info("--- MEMULAI PROSES PLAYWRIGHT ---")
         try:
-            # Cek environment VPS Linux otomatis
-            is_linux_vps = sys.platform.startswith('linux') and not os.getenv("DISPLAY") and not os.getenv("WAYLAND_DISPLAY")
-            actual_headless = True if is_linux_vps else HEADLESS
+            # Paksa headless=True jika di Linux (tanpa peduli isi file .env dan DISPLAY)
+            actual_headless = True if sys.platform.startswith('linux') else HEADLESS
             
             logging.info(f"Target file: {video_path}")
             logging.info(f"Mode Headless yang digunakan: {actual_headless}")
-            logging.info("Sedang menyalakan browser Chromium...")
+            logging.info("Sedang menyalakan browser Chromium (Hard Headless Mode)...")
             
             browser = await p.chromium.launch(
                 headless=actual_headless,
@@ -50,11 +49,11 @@ async def upload_video(video_path, caption=None):
                     "--no-sandbox",
                     "--disable-setuid-sandbox",
                     "--disable-dev-shm-usage",
-                    "--disable-gpu", # Sangat penting untuk VPS tanpa GPU
+                    "--disable-gpu", 
                     "--no-first-run",
                     "--no-zygote"
                 ],
-                timeout=60000 # 1 menit max
+                timeout=60000 
             )
             logging.info("✔ Browser berhasil menyala.")
         except Exception as e:
