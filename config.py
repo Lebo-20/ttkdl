@@ -14,6 +14,10 @@ TIKTOK_STATE_FILE = "tiktok_state.json"
 import sys
 IS_LINUX = sys.platform.startswith('linux')
 HEADLESS = os.getenv("HEADLESS", str(IS_LINUX)).lower() == "true"
+
+# Force headless pada Linux jika tidak ada monitor/XServer (buat VPS)
+if IS_LINUX and not os.getenv("DISPLAY") and not os.getenv("WAYLAND_DISPLAY"):
+    HEADLESS = True
 UPLOAD_DELAY_MIN = 30  # seconds
 UPLOAD_DELAY_MAX = 60  # seconds
 
