@@ -2,3 +2,4 @@ python-telegram-bot[job-queue]
 playwright
 python-dotenv
 Pillow
+playwright-stealth
