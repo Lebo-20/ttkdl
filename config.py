@@ -11,7 +11,9 @@ ADMIN_IDS = [int(i.strip()) for i in os.getenv("ADMIN_IDS", "").split(",") if i.
 
 # TikTok Settings
 TIKTOK_STATE_FILE = "tiktok_state.json"
-HEADLESS = os.getenv("HEADLESS", "False").lower() == "true"
+import sys
+IS_LINUX = sys.platform.startswith('linux')
+HEADLESS = os.getenv("HEADLESS", str(IS_LINUX)).lower() == "true"
 UPLOAD_DELAY_MIN = 30  # seconds
 UPLOAD_DELAY_MAX = 60  # seconds
 
